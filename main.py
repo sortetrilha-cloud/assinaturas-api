@@ -3,7 +3,7 @@ import pyodbc
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from datetime import datetime
-
+import psycopg2
 # Carrega variáveis do .env
 load_dotenv(dotenv_path="app/config/.env")
 
@@ -13,16 +13,23 @@ app = Flask(__name__)
 # Conexão com SQL Server
 SQLSERVER_CONN = os.getenv("SQLSERVER_CONN")
 
+# 🔧 Conexão com o banco do Render
 def conectar_banco():
     try:
-        conn = pyodbc.connect(SQLSERVER_CONN)
+        conn = psycopg2.connect(
+            host="dpg-d49rogruibrs73c29nb0-a.oregon-postgres.render.com",
+            database="assinaturas_db",
+            user="assinaturas_db_user",
+            password="TOxnum4xqerbjiwyxrs0X6dfPtiBGwwP",
+            port="5432"
+        )
         return conn
     except Exception as e:
-        print("Erro ao conectar ao banco:", e)
+        print("❌ Erro ao conectar ao banco:", e)
         return None
 
 
-@app.route('/api/cadastro', methods=['POST'])
+@app.route("/cadastro", methods=["POST"])
 def cadastro_cliente():
     try:
         dados = request.get_json()
@@ -31,13 +38,6 @@ def cadastro_cliente():
         nome = dados.get("nome")
         email = dados.get("email")
         celular = dados.get("telefone")
-
-        # Campos fixos
-        produto = "TESTE"
-        plano = 7
-        cpf = "111"
-        quantidade_jogos = 3
-        data_atual = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         # Validação básica
         if not nome or not email:
@@ -49,26 +49,20 @@ def cadastro_cliente():
 
         cursor = conn.cursor()
 
-        # 1️⃣ Inserir na tabela MEGASENA_CLIENTE_ESPECIAL
+        # Inserir na tabela CLIENTES_API (sem duplicar e-mails)
         cursor.execute("""
-            INSERT INTO MEGASENA_CLIENTE_ESPECIAL (produto, plano, nome, e_mail, celular, cpf, quantidade_jogos, data_assinatura)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (produto, plano, nome, email, celular, cpf, quantidade_jogos, data_atual))
-        conn.commit()
+            INSERT INTO CLIENTES_API (nome, email, celular)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (email) DO NOTHING
+        """, (nome, email, celular))
 
-        # 2️⃣ Inserir na tabela LOTOFACIL_CLIENTE_ESPECIAL
-        cursor.execute("""
-            INSERT INTO LOTOFACIL_CLIENTE_ESPECIAL (produto, plano, nome, e_mail, celular, cpf, quantidade_jogos, data_assinatura)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (produto, plano, nome, email, celular, cpf, quantidade_jogos, data_atual))
         conn.commit()
-
         cursor.close()
         conn.close()
 
         return jsonify({
             "status": "sucesso",
-            "mensagem": f"Cliente {nome} cadastrado com sucesso nas duas loterias!"
+            "mensagem": f"Cliente {nome} cadastrado com sucesso!"
         }), 200
 
     except Exception as e:
@@ -76,5 +70,5 @@ def cadastro_cliente():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
