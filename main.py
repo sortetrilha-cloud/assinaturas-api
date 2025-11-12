@@ -13,7 +13,7 @@ app = Flask(__name__)
 # Conexão com SQL Server
 SQLSERVER_CONN = os.getenv("SQLSERVER_CONN")
 
-# 🔧 Conexão com o banco do Render
+# 🔹 Configuração da conexão com o banco do Render
 def conectar_banco():
     try:
         conn = psycopg2.connect(
@@ -25,11 +25,10 @@ def conectar_banco():
         )
         return conn
     except Exception as e:
-        print("❌ Erro ao conectar ao banco:", e)
+        print("Erro ao conectar:", e)
         return None
 
-
-@app.route("/cadastro", methods=["POST"])
+@app.route('/cadastro', methods=['POST'])
 def cadastro_cliente():
     try:
         dados = request.get_json()
@@ -39,8 +38,8 @@ def cadastro_cliente():
         email = dados.get("email")
         celular = dados.get("telefone")
 
-        # Validação básica
-        if not nome or not email:
+        # ✅ Validação
+        if not nome or not email or not celular:
             return jsonify({"status": "erro", "mensagem": "Campos obrigatórios faltando"}), 400
 
         conn = conectar_banco()
@@ -49,14 +48,13 @@ def cadastro_cliente():
 
         cursor = conn.cursor()
 
-        # Inserir na tabela CLIENTES_API (sem duplicar e-mails)
+        # ✅ Inserção simples na tabela única
         cursor.execute("""
-            INSERT INTO CLIENTES_API (nome, email, celular)
+            INSERT INTO clientes_assinaturas (nome, email, celular)
             VALUES (%s, %s, %s)
-            ON CONFLICT (email) DO NOTHING
         """, (nome, email, celular))
-
         conn.commit()
+
         cursor.close()
         conn.close()
 
@@ -69,6 +67,5 @@ def cadastro_cliente():
         print("Erro geral:", e)
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)
