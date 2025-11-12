@@ -1,19 +1,10 @@
-import os
-import pyodbc
 from flask import Flask, request, jsonify
-from dotenv import load_dotenv
-from datetime import datetime
 import psycopg2
-# Carrega variáveis do .env
-load_dotenv(dotenv_path="app/config/.env")
+from datetime import datetime
 
-# Flask
 app = Flask(__name__)
 
-# Conexão com SQL Server
-SQLSERVER_CONN = os.getenv("SQLSERVER_CONN")
-
-# 🔹 Configuração da conexão com o banco do Render
+# Função para conectar ao banco de dados PostgreSQL (Render)
 def conectar_banco():
     try:
         conn = psycopg2.connect(
@@ -25,10 +16,11 @@ def conectar_banco():
         )
         return conn
     except Exception as e:
-        print("Erro ao conectar:", e)
+        print("Erro na conexão com o banco:", e)
         return None
 
-@app.route('/cadastro', methods=['POST'])
+
+@app.route("/cadastro", methods=["POST"])
 def cadastro_cliente():
     try:
         dados = request.get_json()
@@ -38,7 +30,6 @@ def cadastro_cliente():
         email = dados.get("email")
         celular = dados.get("telefone")
 
-        # ✅ Validação
         if not nome or not email or not celular:
             return jsonify({"status": "erro", "mensagem": "Campos obrigatórios faltando"}), 400
 
@@ -48,7 +39,6 @@ def cadastro_cliente():
 
         cursor = conn.cursor()
 
-        # ✅ Inserção simples na tabela única
         cursor.execute("""
             INSERT INTO clientes_assinaturas (nome, email, celular)
             VALUES (%s, %s, %s)
@@ -67,5 +57,11 @@ def cadastro_cliente():
         print("Erro geral:", e)
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"mensagem": "API de Assinaturas ativa ✅"})
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
