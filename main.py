@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
 import psycopg2
 from datetime import datetime
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # Função para conectar ao banco de dados PostgreSQL (Render)
 def conectar_banco():
